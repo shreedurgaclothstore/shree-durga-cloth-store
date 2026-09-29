@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/bannermanagertab.tsx","./src/components/scannertab.tsx","./src/components/statstab.tsx","./src/components/stocklisttab.tsx","./src/components/uploadgarmenttab.tsx","./src/services/merchantapi.ts"],"version":"5.9.3"}

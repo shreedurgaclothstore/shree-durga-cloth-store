@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #fdf2f4;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(251, 191, 36, 0.15) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(244, 63, 94, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.08) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  html.dark body {
+    background-color: #09090b;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(225, 29, 72, 0.22) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.15) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(225, 29, 72, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(225, 29, 72, 0.12) 0px, transparent 50%);
+    color: #f4f4f5;
+  }
+}
+
+/* Custom glow and shimmer for urgency badges */
+.shimmer-badge {
+  background: linear-gradient(90deg, #f43f5e 0%, #fb7185 50%, #f43f5e 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Hide scrollbars for clean horizontal category filters */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

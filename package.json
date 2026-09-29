@@ -1,0 +1,12 @@
+{
+  "name": "cloth-shop-clearance-ecosystem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "O2O Clothing Clearance Platform with 24h Token Reservations, Cashback, and Cloudflare Edge Backend",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:customer": "npm --prefix customer-app run dev",
+    "dev:merchant": "npm --prefix merchant-portal run dev",
+    "build:all": "npm --prefix customer-app run build && npm --prefix merchant-portal run build"
+  }
+}
