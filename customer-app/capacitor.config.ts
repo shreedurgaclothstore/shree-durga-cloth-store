@@ -1,11 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.clothshop.clearance',
-  appName: 'Clearance Hub',
+  appId: 'com.shreedurga.clothstore',
+  appName: 'Shree Durga Cloth',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    cleartext: true
   },
   plugins: {
     PushNotifications: {

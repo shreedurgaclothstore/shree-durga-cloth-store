@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Shree Durga Cloth</string>
+    <string name="title_activity_main">Shree Durga Cloth</string>
+    <string name="package_name">com.shreedurga.clothstore</string>
+    <string name="custom_url_scheme">com.shreedurga.clothstore</string>
+</resources>

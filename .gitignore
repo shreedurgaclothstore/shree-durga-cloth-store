@@ -27,3 +27,8 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Android Binaries & Local Config
+*.apk
+local.properties
+
