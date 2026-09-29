@@ -13,26 +13,84 @@ export const UploadGarmentTab: React.FC<{ onPublished?: () => void }> = ({ onPub
   const [cashbackAmount, setCashbackAmount] = useState('50');
   const [quantity, setQuantity] = useState('1');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
+  const [photoInfo, setPhotoInfo] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Compress photo on client side to < 100KB for fast 4G upload and D1 storage
+  const compressPhoto = (file: File): Promise<{ dataUrl: string; sizeKb: number }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxWidth = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            const raw = e.target?.result as string;
+            resolve({ dataUrl: raw, sizeKb: Math.round(raw.length / 1024) });
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          const sizeKb = Math.round((dataUrl.length * 3) / 4 / 1024);
+          resolve({ dataUrl, sizeKb });
+        };
+        img.onerror = () => reject(new Error('Could not load image'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Handle Photo Selection or Camera Snap
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setCompressing(true);
+      setErrorMsg(null);
+      try {
+        const { dataUrl, sizeKb } = await compressPhoto(file);
+        setImagePreview(dataUrl);
+        setPhotoInfo(`Optimized (${sizeKb} KB)`);
+      } catch (err) {
+        console.warn('Compression error, fallback to direct reader', err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+          setPhotoInfo('Original Image');
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setCompressing(false);
+      }
     }
   };
 
   // Sample stock images for quick testing if no camera handy
   const handlePresetPhoto = (url: string) => {
     setImagePreview(url);
+    setPhotoInfo('Catalog Preset');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,13 +191,21 @@ export const UploadGarmentTab: React.FC<{ onPublished?: () => void }> = ({ onPub
           {imagePreview ? (
             <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-gray-100 border border-gray-200 mb-2">
               <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              <div className="absolute top-3 left-3 bg-black/60 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-sm">
+                {photoInfo || 'Ready to Publish'}
+              </div>
               <button
                 type="button"
-                onClick={() => setImagePreview(null)}
+                onClick={() => { setImagePreview(null); setPhotoInfo(null); }}
                 className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-xl backdrop-blur-sm"
               >
                 Change Photo
               </button>
+            </div>
+          ) : compressing ? (
+            <div className="p-8 bg-emerald-50/50 border-2 border-dashed border-emerald-300 rounded-2xl flex flex-col items-center justify-center text-center">
+              <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+              <span className="text-xs font-bold text-emerald-800">Optimizing photo for fast upload...</span>
             </div>
           ) : (
             <div className="space-y-3">

@@ -1,6 +1,25 @@
 import { Product, TokenReservation } from '../types';
+import { AdminAuthService } from './adminAuth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://shree-durga-cloth-backend.shreedurgacloth.workers.dev/api';
+
+function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = AdminAuthService.getToken();
+  const headers: Record<string, string> = {
+    ...extraHeaders
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function handleAuthFailure(res: Response) {
+  if (res.status === 401) {
+    console.warn('Zero-Trust Authorization failed or session expired. Locking console.');
+    AdminAuthService.lock();
+  }
+}
 
 export interface ScanResult {
   success: boolean;
@@ -27,67 +46,37 @@ export interface MerchantStats {
 }
 
 export const MerchantApi = {
+  // 1. Scan customer token
   async scanToken(query: string): Promise<ScanResult> {
     try {
       const res = await fetch(`${API_BASE}/merchant/scan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ query: query.trim() })
       });
+      handleAuthFailure(res);
       return await res.json();
     } catch (e: any) {
-      // Local fallback simulator if backend is offline
-      const localTokens: TokenReservation[] = JSON.parse(localStorage.getItem('cloth_local_tokens') || '[]');
-      const token = localTokens.find(t => t.id.toLowerCase() === query.trim().toLowerCase() || t.qrPayload === query.trim());
-      
-      if (!token) {
-        return { success: false, valid: false, error: 'Token not found in system.' };
-      }
-
-      if (token.status === 'CLAIMED') {
-        return { success: true, valid: false, status: 'CLAIMED', error: 'Token was ALREADY CLAIMED!' };
-      }
-
-      if (token.status === 'EXPIRED') {
-        return { success: true, valid: false, status: 'EXPIRED', error: 'Token has EXPIRED!' };
-      }
-
-      return {
-        success: true,
-        valid: true,
-        status: 'ACTIVE',
-        token,
-        pricingBreakdown: {
-          originalPrice: token.originalPrice,
-          discountedPrice: token.discountedPrice,
-          cashbackDiscount: token.cashbackAmount,
-          finalPayableAmount: token.finalPayableAmount
-        }
-      };
+      return { success: false, valid: false, error: 'Network connection failed' };
     }
   },
 
+  // 2. Claim & redeem token
   async claimToken(tokenId: string): Promise<{ success: boolean; token?: TokenReservation; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/merchant/claim`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ tokenId })
       });
+      handleAuthFailure(res);
       return await res.json();
     } catch (e: any) {
-      const localTokens: TokenReservation[] = JSON.parse(localStorage.getItem('cloth_local_tokens') || '[]');
-      const token = localTokens.find(t => t.id === tokenId);
-      if (token) {
-        token.status = 'CLAIMED';
-        token.claimedAt = new Date().toISOString();
-        localStorage.setItem('cloth_local_tokens', JSON.stringify(localTokens));
-        return { success: true, token };
-      }
-      return { success: false, error: 'Failed to claim token locally' };
+      return { success: false, error: 'Failed to claim token' };
     }
   },
 
+  // 3. Add new garment to inventory and live catalog
   async addProduct(productData: {
     title: string;
     description: string;
@@ -103,47 +92,58 @@ export const MerchantApi = {
     try {
       const res = await fetch(`${API_BASE}/merchant/products`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(productData)
       });
+      handleAuthFailure(res);
       return await res.json();
     } catch (e: any) {
       return { success: false, error: 'Failed to connect to backend API' };
     }
   },
 
+  // 4. Get merchant dashboard stats
   async getStats(): Promise<MerchantStats> {
     try {
-      const res = await fetch(`${API_BASE}/merchant/stats`);
+      const res = await fetch(`${API_BASE}/merchant/stats`, {
+        headers: getAuthHeaders()
+      });
+      handleAuthFailure(res);
       const data = await res.json();
-      if (data.success) return data.stats;
+      if (data.success && data.stats) return data.stats;
     } catch (e) {
-      console.warn('Backend offline, returning mock stats');
+      console.warn('Stats fetch notice', e);
     }
     return {
-      activeTokens: 2,
-      totalClaimedCount: 14,
-      totalCashbackDistributed: 1150,
-      totalRevenueRecovered: 9850,
-      totalProducts: 8,
-      inStockCount: 6
+      activeTokens: 0,
+      totalClaimedCount: 0,
+      totalCashbackDistributed: 0,
+      totalRevenueRecovered: 0,
+      totalProducts: 0,
+      inStockCount: 0
     };
   },
 
+  // 5. Get public products list
   async getProducts(): Promise<Product[]> {
     try {
       const res = await fetch(`${API_BASE}/products`);
       const data = await res.json();
-      if (data.success) return data.products;
+      if (data.success && data.products) return data.products;
     } catch (e) {
-      console.warn('Backend offline, returning empty products list');
+      console.warn('Backend products fetch notice', e);
     }
     return [];
   },
 
+  // 6. Delete garment
   async deleteProduct(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`${API_BASE}/merchant/products/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/merchant/products/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      handleAuthFailure(res);
       const data = await res.json();
       return !!data.success;
     } catch (e) {
@@ -152,13 +152,15 @@ export const MerchantApi = {
     }
   },
 
+  // 7. Update garment stock
   async updateStock(id: string, quantity: number): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/merchant/products/${id}/stock`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ quantity })
       });
+      handleAuthFailure(res);
       const data = await res.json();
       return !!data.success;
     } catch (e) {
@@ -167,33 +169,41 @@ export const MerchantApi = {
     }
   },
 
+  // 8. Get promotional banners
   async getBanners(): Promise<any[]> {
     try {
       const res = await fetch(`${API_BASE}/banners`);
       const data = await res.json();
-      if (data.success) return data.banners;
+      if (data.success && data.banners) return data.banners;
     } catch (e) {
-      console.warn('Backend offline for banners');
+      console.warn('Banners fetch notice', e);
     }
     return [];
   },
 
+  // 9. Add promotional banner
   async addBanner(bannerData: any): Promise<{ success: boolean; banner?: any; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/merchant/banners`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(bannerData)
       });
+      handleAuthFailure(res);
       return await res.json();
     } catch (e: any) {
       return { success: false, error: e.message || 'Failed to add banner' };
     }
   },
 
+  // 10. Delete promotional banner
   async deleteBanner(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`${API_BASE}/merchant/banners/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/merchant/banners/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      handleAuthFailure(res);
       const data = await res.json();
       return !!data.success;
     } catch (e) {

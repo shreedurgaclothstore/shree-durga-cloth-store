@@ -1,13 +1,33 @@
 import React, { useState } from 'react';
-import { Camera, UploadCloud, Layers, BarChart3, Tag, ShieldCheck } from 'lucide-react';
+import { Camera, UploadCloud, Layers, BarChart3, Tag, ShieldCheck, Lock } from 'lucide-react';
 import { ScannerTab } from './components/ScannerTab';
 import { UploadGarmentTab } from './components/UploadGarmentTab';
 import { StockListTab } from './components/StockListTab';
 import { BannerManagerTab } from './components/BannerManagerTab';
 import { StatsTab } from './components/StatsTab';
+import { AdminLockScreen } from './components/AdminLockScreen';
+import { AdminAuthService } from './services/adminAuth';
 
 export const App: React.FC = () => {
+  const [unlocked, setUnlocked] = useState<boolean>(() => AdminAuthService.isUnlocked());
   const [activeTab, setActiveTab] = useState<'SCAN' | 'UPLOAD' | 'STOCK' | 'BANNERS' | 'STATS'>('SCAN');
+
+  React.useEffect(() => {
+    const handleAuthChange = (e: any) => {
+      if (typeof e.detail?.unlocked === 'boolean') {
+        setUnlocked(e.detail.unlocked);
+      } else {
+        setUnlocked(AdminAuthService.isUnlocked());
+      }
+    };
+
+    window.addEventListener('admin-auth-changed', handleAuthChange);
+    return () => window.removeEventListener('admin-auth-changed', handleAuthChange);
+  }, []);
+
+  if (!unlocked) {
+    return <AdminLockScreen onUnlock={() => setUnlocked(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
@@ -32,12 +52,26 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">System Status</span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live Counter
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="text-right hidden sm:block">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">System Status</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live Counter
+              </span>
+            </div>
+
+            <button
+              onClick={() => {
+                AdminAuthService.lock();
+                setUnlocked(false);
+              }}
+              title="Lock Counter Console"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-rose-50 hover:border-rose-200 text-gray-600 hover:text-rose-600 text-xs font-semibold transition-all shadow-sm"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Lock</span>
+            </button>
           </div>
         </div>
       </header>

@@ -11,3 +11,10 @@ database_id = "35db439e-cc7c-495f-beef-0a44eb9c9ee6"
 # Scheduled Cron for 24-hr token expiration (every 10 minutes)
 [triggers]
 crons = ["*/10 * * * *"]
+
+# Zero-Trust Admin Authentication Environment Variables
+[vars]
+ADMIN_TOTP_SECRET = "KRDG4ZDPNU6T2ZLS"
+ADMIN_EMERGENCY_PASSCODE = "SD-2026-DURGA"
+ADMIN_SESSION_SECRET = "SHREE_DURGA_ZERO_TRUST_SECRET_KEY_2026_CLOUDFLARE"
+
