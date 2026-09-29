@@ -6,7 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    cleartext: true
+    cleartext: true,
+    allowNavigation: [
+      'shree-durga-cloth-store.firebaseapp.com',
+      'accounts.google.com',
+      '*.google.com',
+      '*.googleapis.com',
+      '*.firebaseapp.com'
+    ]
   },
   plugins: {
     PushNotifications: {

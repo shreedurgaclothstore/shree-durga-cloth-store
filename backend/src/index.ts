@@ -812,6 +812,34 @@ app.get('/api/merchant/stats', async (c) => {
   return c.json({ success: true, stats });
 });
 
+// 10b. Merchant: Get Tokens History (Active holds, Claimed sales, All)
+app.get('/api/merchant/tokens', async (c) => {
+  const status = c.req.query('status') || 'ALL';
+  if (c.env?.DB) {
+    try {
+      let query = `SELECT * FROM tokens`;
+      const params: any[] = [];
+      if (status !== 'ALL') {
+        if (status === 'ACTIVE') {
+          query += ` WHERE status = 'ACTIVE' AND datetime(expires_at) > datetime('now')`;
+        } else {
+          query += ` WHERE status = ?`;
+          params.push(status);
+        }
+      }
+      query += ` ORDER BY booked_at DESC LIMIT 100`;
+      const res = await c.env.DB.prepare(query).bind(...params).all();
+      const tokens = (res.results || []).map(mapDbToken);
+      return c.json({ success: true, count: tokens.length, tokens });
+    } catch (e: any) {
+      console.warn('D1 tokens query error:', e);
+    }
+  }
+
+  const tokens = memoryStore.getMerchantTokens(status);
+  return c.json({ success: true, count: tokens.length, tokens });
+});
+
 // 11. Banners: Get Active Promotional Banners
 app.get('/api/banners', (c) => {
   const category = c.req.query('category');

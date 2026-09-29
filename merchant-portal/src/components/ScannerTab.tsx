@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, Search, CheckCircle2, AlertTriangle, XCircle, Sparkles, User, RefreshCw } from 'lucide-react';
+import { Camera, Search, CheckCircle2, AlertTriangle, XCircle, Sparkles, User, RefreshCw, Upload, Image } from 'lucide-react';
 import { MerchantApi, ScanResult } from '../services/merchantApi';
 
 export const ScannerTab: React.FC = () => {
@@ -11,58 +11,126 @@ export const ScannerTab: React.FC = () => {
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Initialize camera scanner
-  const startCamera = async () => {
-    try {
-      setScanResult(null);
-      setClaimSuccess(false);
-      setIsScanning(true);
-
-      const html5QrCode = new Html5Qrcode('qr-reader');
-      scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        (decodedText) => {
-          // Success callback
-          stopCamera();
-          verifyToken(decodedText);
-        },
-        () => {
-          // Frame error (ignore frame misses)
-        }
-      );
-    } catch (err) {
-      console.error('Camera failed to start:', err);
-      setIsScanning(false);
-      alert('Camera access failed. Please grant camera permission or use manual code entry.');
-    }
-  };
-
+  // Stop camera helper
   const stopCamera = async () => {
-    if (scannerRef.current && isScanning) {
+    if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
         scannerRef.current.clear();
       } catch (e) {
         console.warn('Error stopping scanner:', e);
       }
-      setIsScanning(false);
+      scannerRef.current = null;
+    }
+    setIsScanning(false);
+  };
+
+  // Initialize camera scanner with multiple fallbacks
+  const startCamera = async () => {
+    try {
+      setScanResult(null);
+      setClaimSuccess(false);
+
+      // Stop any existing scanner first
+      await stopCamera();
+
+      // Show the scanner viewport
+      setIsScanning(true);
+
+      // Allow DOM to render #qr-reader
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      const readerElem = document.getElementById('qr-reader');
+      if (!readerElem) {
+        throw new Error('Scanner container element is not ready.');
+      }
+
+      const html5QrCode = new Html5Qrcode('qr-reader');
+      scannerRef.current = html5QrCode;
+
+      const qrConfig = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
+
+      const onScanSuccess = (decodedText: string) => {
+        stopCamera();
+        verifyToken(decodedText);
+      };
+
+      // 1. Try camera enumeration first (best compatibility across Android, iOS, Windows, Mac)
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          const backCam = devices.find((d) =>
+            /back|rear|environment|primary/i.test(d.label)
+          );
+          const cameraId = backCam ? backCam.id : devices[0].id;
+          await html5QrCode.start(cameraId, qrConfig, onScanSuccess, () => {});
+          return;
+        }
+      } catch (camErr) {
+        console.warn('Camera enumeration error, trying facingMode fallback:', camErr);
+      }
+
+      // 2. Fallback to facingMode: environment
+      try {
+        await html5QrCode.start({ facingMode: 'environment' }, qrConfig, onScanSuccess, () => {});
+        return;
+      } catch (envErr) {
+        console.warn('FacingMode environment failed, trying user camera:', envErr);
+      }
+
+      // 3. Fallback to facingMode: user or any default camera
+      await html5QrCode.start({ facingMode: 'user' }, qrConfig, onScanSuccess, () => {});
+
+    } catch (err: any) {
+      console.error('Camera failed to start:', err);
+      await stopCamera();
+
+      const errMsg = err?.message || String(err);
+      if (/permission|denied|NotAllowedError/i.test(errMsg)) {
+        alert('Camera permission was denied. Please allow Camera permission in your browser or phone app settings.');
+      } else if (/NotFound|DevicesNotFoundError/i.test(errMsg)) {
+        alert('No camera detected on this device. Please enter the token manually or upload a QR image.');
+      } else {
+        alert(`Camera error: ${errMsg}\n\nYou can also enter the 6-digit code or upload the QR photo.`);
+      }
+    }
+  };
+
+  // Handle QR code scanning from an uploaded image file
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      setScanResult(null);
+      setClaimSuccess(false);
+
+      const fileScanner = new Html5Qrcode('qr-file-helper');
+      const decodedText = await fileScanner.scanFile(file, true);
+      fileScanner.clear();
+      verifyToken(decodedText);
+    } catch (err: any) {
+      alert('Could not detect a valid QR code in this image. Please ensure the QR code is clearly visible, or enter the 6-digit code manually.');
+    } finally {
+      setLoading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current && isScanning) {
-        scannerRef.current.stop().catch(() => {});
-      }
+      stopCamera();
     };
-  }, [isScanning]);
+  }, []);
 
   const verifyToken = async (query: string) => {
     if (!query.trim()) return;
@@ -104,6 +172,7 @@ export const ScannerTab: React.FC = () => {
   };
 
   const resetAll = () => {
+    stopCamera();
     setScanResult(null);
     setClaimSuccess(false);
     setManualCode('');
@@ -112,6 +181,16 @@ export const ScannerTab: React.FC = () => {
   return (
     <div className="space-y-5 max-w-xl mx-auto">
       
+      {/* Hidden helper element for file scanning */}
+      <div id="qr-file-helper" className="hidden"></div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Top Action Card */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-200">
         <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-2 mb-1">
@@ -122,25 +201,38 @@ export const ScannerTab: React.FC = () => {
           Scan customer's phone QR code or type 6-digit token code to verify & apply cashback.
         </p>
 
-        {/* Camera Scanner Viewport */}
-        {isScanning ? (
-          <div className="relative rounded-2xl overflow-hidden bg-black aspect-square max-w-xs mx-auto mb-4 border-2 border-emerald-500">
-            <div id="qr-reader" className="w-full h-full"></div>
-            <button
-              onClick={stopCamera}
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-lg"
-            >
-              Cancel Camera
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-2 mb-4">
+        {/* Camera Scanner Viewport — ALWAYS kept in DOM to prevent React mount race condition */}
+        <div
+          className={`relative rounded-2xl overflow-hidden bg-slate-950 aspect-square max-w-xs mx-auto mb-4 border-2 border-emerald-500 transition-all ${
+            isScanning ? 'block' : 'hidden'
+          }`}
+        >
+          <div id="qr-reader" className="w-full h-full"></div>
+          <button
+            onClick={stopCamera}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-lg transition-transform active:scale-95"
+          >
+            Cancel Camera
+          </button>
+        </div>
+
+        {/* Action Buttons (Camera & Upload Photo) */}
+        {!isScanning && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             <button
               onClick={startCamera}
-              className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-98"
+              className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-98"
             >
               <Camera className="w-4 h-4" />
               <span>Open Camera Scanner</span>
+            </button>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-extrabold text-xs sm:text-sm rounded-2xl border border-gray-200 flex items-center justify-center gap-2 transition-all active:scale-98"
+            >
+              <Upload className="w-4 h-4 text-emerald-600" />
+              <span>Upload QR Photo</span>
             </button>
           </div>
         )}

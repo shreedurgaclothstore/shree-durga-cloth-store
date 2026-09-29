@@ -124,6 +124,23 @@ export const MerchantApi = {
     };
   },
 
+  // 4b. Get merchant token history (Active holds, Claimed sales, All)
+  async getTokens(status: string = 'ALL'): Promise<TokenReservation[]> {
+    try {
+      const res = await fetch(`${API_BASE}/merchant/tokens?status=${status}`, {
+        headers: getAuthHeaders()
+      });
+      handleAuthFailure(res);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.tokens)) {
+        return data.tokens;
+      }
+    } catch (e) {
+      console.warn('Tokens fetch notice', e);
+    }
+    return [];
+  },
+
   // 5. Get public products list
   async getProducts(): Promise<Product[]> {
     try {

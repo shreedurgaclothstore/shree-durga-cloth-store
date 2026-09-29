@@ -421,6 +421,15 @@ class MemoryStore {
     };
   }
 
+  getMerchantTokens(status?: string): TokenReservation[] {
+    this.sweepExpired();
+    let list = [...this.tokens];
+    if (status && status !== 'ALL') {
+      list = list.filter(t => t.status === status);
+    }
+    return list.sort((a, b) => new Date(b.bookedAt).getTime() - new Date(a.bookedAt).getTime());
+  }
+
   sweepExpired(): number {
     const now = new Date();
     let expiredCount = 0;

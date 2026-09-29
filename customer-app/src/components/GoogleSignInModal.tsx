@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Sparkles, ShieldCheck, Check, Settings, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Sparkles, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { AuthService } from '../services/auth';
 import { UserProfile } from '../types';
 
@@ -15,11 +15,6 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
   onSuccess
 }) => {
   const googleBtnRef = useRef<HTMLDivElement>(null);
-  const [clientId, setClientId] = useState(AuthService.getGoogleClientId());
-  const [showConfig, setShowConfig] = useState(false);
-  const [inputEmail, setInputEmail] = useState('');
-  const [inputName, setInputName] = useState('');
-  const [savedConfigMessage, setSavedConfigMessage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -28,7 +23,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
     setAuthError(null);
     setLoading(false);
 
-    // Initialize GIS if client ID is configured
+    // Initialize GIS if configured
     const initAndRender = () => {
       AuthService.initGoogleIdentity((user) => {
         if (onSuccess) onSuccess(user);
@@ -49,12 +44,12 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
 
     const timer = setTimeout(initAndRender, 150);
     return () => clearTimeout(timer);
-  }, [isOpen, clientId]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // 1. Official Firebase Google Popup Authentication
-  const handleFirebaseGoogleLogin = async () => {
+  // 1. Official Google Authentication
+  const handleGoogleLogin = async () => {
     setLoading(true);
     setAuthError(null);
     try {
@@ -62,36 +57,19 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
       if (onSuccess) onSuccess(user);
       onClose();
     } catch (err: any) {
-      console.warn('Firebase Google Sign-In error:', err);
+      console.warn('Google Sign-In error:', err);
       const code = err?.code;
       if (code === 'auth/popup-closed-by-user') {
-        setAuthError('Sign-in popup was closed. Please try again.');
+        setAuthError('Sign-in was closed. Please try again.');
       } else if (code === 'auth/popup-blocked') {
-        setAuthError('Popup was blocked by your browser. Please allow popups for this site.');
+        setAuthError('Popup was blocked. Please allow popups or use in-app sign in.');
       } else if (code === 'auth/operation-not-allowed') {
-        setAuthError('Google sign-in is not enabled yet in Firebase Console. (Authentication > Sign-in method > Enable Google)');
+        setAuthError('Google sign-in is not enabled in Firebase Console.');
       } else if (code === 'auth/unauthorized-domain') {
-        setAuthError('Domain not authorized in Firebase. Add this domain under Firebase Console > Authentication > Settings > Authorized domains.');
+        setAuthError('Domain not authorized in Firebase.');
       } else {
-        setAuthError(err?.message || 'Could not complete Google Sign-In. You can use the direct option below.');
+        setAuthError(err?.message || 'Could not complete Google Sign-In. Please try again.');
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveClientId = () => {
-    AuthService.setGoogleClientId(clientId);
-    setSavedConfigMessage(true);
-    setTimeout(() => setSavedConfigMessage(false), 2500);
-  };
-
-  const handleQuickLogin = async (email: string, name: string) => {
-    setLoading(true);
-    try {
-      const user = await AuthService.signInWithGoogle(email, name);
-      if (onSuccess) onSuccess(user);
-      onClose();
     } finally {
       setLoading(false);
     }
@@ -102,7 +80,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-gray-200/80 dark:border-zinc-800 relative transition-all max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-gray-200/80 dark:border-zinc-800 relative transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -114,10 +92,10 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
+        {/* Google Emblem */}
         <div className="text-center space-y-2 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-50 to-rose-100 dark:from-zinc-800 dark:to-zinc-800/80 mx-auto flex items-center justify-center shadow-xs border border-rose-100 dark:border-zinc-700">
-            <svg className="w-8 h-8" viewBox="0 0 24 24">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-50 to-amber-50 dark:from-zinc-800 dark:to-zinc-800/80 mx-auto flex items-center justify-center shadow-xs border border-rose-100 dark:border-zinc-700">
+            <svg className="w-9 h-9" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -133,9 +111,9 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         </div>
 
         {/* Benefits Badges */}
-        <div className="grid grid-cols-2 gap-2 mb-5 text-[11px] font-bold text-gray-700 dark:text-zinc-300">
+        <div className="grid grid-cols-2 gap-2 mb-6 text-[11px] font-bold text-gray-700 dark:text-zinc-300">
           <div className="flex items-center gap-1.5 p-2 rounded-xl bg-rose-50/70 dark:bg-zinc-800/60 border border-rose-100/80 dark:border-zinc-700">
-            <Sparkles className="w-3.5 h-3.5 text-brand-600 dark:text-rose-400 shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>24h Zero-Risk Hold</span>
           </div>
           <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50/70 dark:bg-zinc-800/60 border border-emerald-100/80 dark:border-zinc-700">
@@ -146,27 +124,22 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
 
         {/* Error Notice */}
         {authError && (
-          <div className="mb-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
+          <div className="mb-5 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-semibold">{authError}</p>
-              <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                You can also continue instantly below by selecting or typing your Google account.
-              </p>
-            </div>
+            <p className="font-medium">{authError}</p>
           </div>
         )}
 
-        {/* Primary Action: Official Google Sign-In Popup */}
-        <div className="space-y-3 mb-5">
+        {/* Primary Action: Official Google Sign-In Button */}
+        <div className="space-y-4">
           <button
-            onClick={handleFirebaseGoogleLogin}
+            onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-3 px-4 rounded-2xl bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-2 border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white font-extrabold text-sm flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-98 disabled:opacity-60"
+            className="w-full py-3.5 px-4 rounded-2xl bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-2 border-gray-200 dark:border-zinc-700 hover:border-gray-300 text-gray-900 dark:text-white font-extrabold text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg transition-all active:scale-98 disabled:opacity-60"
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin text-brand-600" />
+                <Loader2 className="w-5 h-5 animate-spin text-rose-600" />
                 <span>Connecting with Google...</span>
               </>
             ) : (
@@ -186,131 +159,11 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
             <div className="flex justify-center pt-1" ref={googleBtnRef}></div>
           )}
 
-          <p className="text-[10px] text-center text-gray-400 dark:text-zinc-500">
-            Official Firebase Authentication • SSL Encrypted
+          <p className="text-[11px] text-center text-gray-400 dark:text-zinc-500">
+            Official Google Authentication • SSL Encrypted
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-            <span className="bg-white dark:bg-zinc-900 px-3 text-gray-400 dark:text-zinc-500">
-              Or Fast Direct Profile
-            </span>
-          </div>
-        </div>
-
-        {/* Quick Google Test Profiles */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              onClick={() => handleQuickLogin('karan.sharma@gmail.com', 'Karan Sharma')}
-              disabled={loading}
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 hover:border-brand-500 bg-gray-50 dark:bg-zinc-800 hover:bg-rose-50/40 dark:hover:bg-zinc-700/60 flex items-center gap-2.5 text-left transition-all"
-            >
-              <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                K
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">Karan Sharma</p>
-                <p className="text-[10px] text-gray-400 dark:text-zinc-400 truncate">karan.sharma@gmail.com</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('shree.customer@gmail.com', 'Shree Durga Customer')}
-              disabled={loading}
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 hover:border-brand-500 bg-gray-50 dark:bg-zinc-800 hover:bg-rose-50/40 dark:hover:bg-zinc-700/60 flex items-center gap-2.5 text-left transition-all"
-            >
-              <div className="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                S
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">Shree Durga Customer</p>
-                <p className="text-[10px] text-gray-400 dark:text-zinc-400 truncate">shree.customer@gmail.com</p>
-              </div>
-            </button>
-          </div>
-
-          {/* Custom Google Email Form */}
-          <div className="pt-1 space-y-2">
-            <input
-              type="text"
-              placeholder="Your Full Name (e.g. Ramesh Patel)"
-              value={inputName}
-              onChange={(e) => setInputName(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs border border-gray-200 dark:border-zinc-700 bg-gray-50/60 dark:bg-zinc-800 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-zinc-800"
-            />
-            <input
-              type="email"
-              placeholder="Your Google Email (e.g. name@gmail.com)"
-              value={inputEmail}
-              onChange={(e) => setInputEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs border border-gray-200 dark:border-zinc-700 bg-gray-50/60 dark:bg-zinc-800 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-zinc-800"
-            />
-            <button
-              onClick={() => {
-                if (inputEmail.trim()) {
-                  handleQuickLogin(inputEmail.trim(), inputName.trim() || inputEmail.split('@')[0]);
-                }
-              }}
-              disabled={!inputEmail.trim() || loading}
-              className="w-full py-2.5 rounded-xl bg-gray-900 hover:bg-black dark:bg-brand-600 dark:hover:bg-brand-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <span>Continue with Entered Google Email</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Optional Google Cloud OAuth Client ID Manager */}
-        <div className="mt-5 pt-4 border-t border-gray-100 dark:border-zinc-800">
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className="w-full flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200 transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <Settings className="w-3.5 h-3.5" />
-              <span>Firebase / Google Project Details</span>
-            </span>
-            {showConfig ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-
-          {showConfig && (
-            <div className="mt-2.5 p-3 rounded-2xl bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 space-y-2 animate-in fade-in">
-              <div className="text-[10px] text-gray-500 dark:text-zinc-400 space-y-1">
-                <p>• <b>Project ID:</b> <code className="bg-gray-200 dark:bg-zinc-700 px-1 py-0.5 rounded">shree-durga-cloth-store</code></p>
-                <p>• <b>Auth Domain:</b> <code className="bg-gray-200 dark:bg-zinc-700 px-1 py-0.5 rounded">shree-durga-cloth-store.firebaseapp.com</code></p>
-                <p className="pt-1 text-gray-600 dark:text-zinc-300">
-                  Tip: Ensure Google provider is enabled in Firebase Console (Authentication &gt; Sign-in method &gt; Google) and <code className="text-brand-600">shree-durga-clearance.pages.dev</code> is added under Authorized domains.
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-gray-200 dark:border-zinc-700">
-                <label className="block text-[10px] font-bold text-gray-600 dark:text-zinc-400 mb-1">
-                  Optional GSI Client ID Override:
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. 123456789-xyz.apps.googleusercontent.com"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 text-[11px] font-mono border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
-                  <button
-                    onClick={handleSaveClientId}
-                    className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-[11px] flex items-center gap-1 transition-colors"
-                  >
-                    {savedConfigMessage ? <Check className="w-3 h-3" /> : 'Save'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
