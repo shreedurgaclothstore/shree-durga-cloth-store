@@ -33,7 +33,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
       
       {/* Merchant Top Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm pt-[env(safe-area-inset-top,0px)]">
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-500/30 shadow-md shadow-amber-600/10 shrink-0 bg-slate-950 flex items-center justify-center">
