@@ -1,4 +1,4 @@
-import { Product, TokenReservation, ShopInfo, Banner } from '../types';
+import { Product, TokenReservation, ShopInfo, Banner, UserProfile } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
 
@@ -281,6 +281,39 @@ export const ApiService = {
       list = list.map(t => t.id === tokenId ? { ...t, status: 'CANCELLED' } : t);
       localStorage.setItem('cloth_local_tokens', JSON.stringify(list));
       return true;
+    }
+  },
+
+  async syncGoogleUser(params: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    avatarUrl?: string;
+    id?: string;
+    phone?: string;
+  }): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      const data = await res.json();
+      return data;
+    } catch (e: any) {
+      console.warn('Backend sync failed, using offline fallback', e);
+      return {
+        success: true,
+        user: {
+          id: params.id || `google-${Date.now()}`,
+          email: params.email || '',
+          name: params.name || 'Shopper',
+          avatarUrl: params.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(params.name || 'User')}`,
+          phone: params.phone || '',
+          totalCashbackEarned: 0,
+          activeTokensCount: 0
+        }
+      };
     }
   }
 };

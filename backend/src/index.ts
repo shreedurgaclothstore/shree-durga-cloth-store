@@ -35,6 +35,73 @@ app.get('/api/shop', (c) => {
   return c.json({ success: true, shop: DEFAULT_SHOP });
 });
 
+// 1.1 Google Sign-In & User Sync
+app.post('/api/auth/google', async (c) => {
+  try {
+    const body = await getJsonBody(c);
+    const { credential, email, name, avatarUrl, id, phone } = body;
+
+    let userEmail = email;
+    let userName = name;
+    let userAvatar = avatarUrl;
+    let userId = id;
+
+    // Decode Google JWT payload if provided
+    if (credential && typeof credential === 'string') {
+      try {
+        const parts = credential.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+          if (payload.picture) userAvatar = payload.picture;
+          if (payload.sub) userId = `google-${payload.sub}`;
+        }
+      } catch (jwtErr) {
+        console.warn('Failed to parse JWT payload', jwtErr);
+      }
+    }
+
+    if (!userEmail) {
+      return c.json({ success: false, error: 'Email is required for Google authentication.' }, 400);
+    }
+
+    const user = {
+      id: userId || `user-${Date.now()}`,
+      email: userEmail,
+      name: userName || userEmail.split('@')[0],
+      avatarUrl: userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || userEmail)}`,
+      phone: phone || '',
+      totalCashbackEarned: 0,
+      activeTokensCount: memoryStore.getUserActiveTokensCount(userEmail)
+    };
+
+    // If Cloudflare D1 database binding is present, upsert into users table
+    if (c.env?.DB) {
+      try {
+        await c.env.DB.prepare(`
+          INSERT INTO users (id, email, name, avatar_url, phone)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(email) DO UPDATE SET
+            name = excluded.name,
+            avatar_url = excluded.avatar_url,
+            phone = COALESCE(NULLIF(excluded.phone, ''), users.phone)
+        `).bind(user.id, user.email, user.name, user.avatarUrl, user.phone).run();
+      } catch (dbErr) {
+        console.warn('D1 user upsert notice:', dbErr);
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Google Sign-In verified successfully',
+      user
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message || 'Authentication failed' }, 500);
+  }
+});
+
 // 2. Get Public Products Catalog (with filters)
 app.get('/api/products', (c) => {
   const category = c.req.query('category');

@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { Product, UserProfile, TokenReservation } from '../types';
 import { ApiService } from '../services/api';
 import { AuthService } from '../services/auth';
+import { GoogleSignInModal } from './GoogleSignInModal';
 
 interface BookingModalProps {
   product: Product;
@@ -21,16 +22,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [phone, setPhone] = useState(user?.phone || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // If user isn't logged in, prompt Google Login
-  const handleGoogleLogin = async () => {
-    try {
-      const newUser = await AuthService.signInWithGoogle();
-      if (newUser.phone) setPhone(newUser.phone);
-    } catch (e) {
-      setError('Could not complete Google Sign-In');
-    }
-  };
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
 
   const handleConfirmBooking = async () => {
     if (!user) {
@@ -156,7 +148,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Sign in with Google to reserve this piece
               </p>
               <button
-                onClick={handleGoogleLogin}
+                onClick={() => setShowGoogleModal(true)}
                 className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-600 border border-gray-200 dark:border-zinc-600 text-xs font-bold text-gray-800 dark:text-white flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -227,6 +219,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         </div>
       </div>
+
+      {/* Google Sign-In & 1-Tap Modal */}
+      <GoogleSignInModal
+        isOpen={showGoogleModal}
+        onClose={() => setShowGoogleModal(false)}
+        onSuccess={(newUser) => {
+          if (newUser.phone) setPhone(newUser.phone);
+        }}
+      />
     </div>
   );
 };

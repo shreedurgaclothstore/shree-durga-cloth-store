@@ -6,6 +6,7 @@ import {
 import { UserProfile, ShopInfo } from '../types';
 import { AuthService } from '../services/auth';
 import { themeService, Theme } from '../services/theme';
+import { GoogleSignInModal } from './GoogleSignInModal';
 
 interface SettingsViewProps {
   user: UserProfile | null;
@@ -20,8 +21,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [theme, setTheme] = useState<Theme>(themeService.getTheme());
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [customEmail, setCustomEmail] = useState('');
-  const [customName, setCustomName] = useState('');
 
   useEffect(() => {
     return themeService.subscribe(setTheme);
@@ -29,11 +28,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleSelectTheme = (newTheme: Theme) => {
     themeService.setTheme(newTheme);
-  };
-
-  const handleQuickLogin = (email: string, name: string) => {
-    AuthService.signInWithGoogle(email, name);
-    setShowLoginModal(false);
   };
 
   return (
@@ -237,43 +231,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <p className="text-[10px]">App Version 1.2.0 • 100% Free & Open Source O2O Platform</p>
       </div>
 
-      {/* Quick Google Sign-In Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-zinc-800 text-center">
-            <h3 className="font-extrabold text-gray-900 dark:text-white text-lg">Sign in with Google</h3>
-            <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1 mb-4">
-              Select one-tap profile to reserve clothes & claim counter cashback
-            </p>
-
-            <div className="space-y-2">
-              <button
-                onClick={() => handleQuickLogin('rahul.verma@gmail.com', 'Rahul Verma')}
-                className="w-full py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-xs font-bold text-gray-800 dark:text-zinc-200 flex items-center justify-between"
-              >
-                <span>Rahul Verma (rahul.verma@gmail.com)</span>
-                <span className="text-[10px] text-brand-600">Select</span>
-              </button>
-              <button
-                onClick={() => handleQuickLogin('priya.sharma@gmail.com', 'Priya Sharma')}
-                className="w-full py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-xs font-bold text-gray-800 dark:text-zinc-200 flex items-center justify-between"
-              >
-                <span>Priya Sharma (priya.sharma@gmail.com)</span>
-                <span className="text-[10px] text-brand-600">Select</span>
-              </button>
-            </div>
-
-            <div className="pt-4">
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Official Google Sign-In & 1-Tap Modal */}
+      <GoogleSignInModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
 
     </div>
   );
