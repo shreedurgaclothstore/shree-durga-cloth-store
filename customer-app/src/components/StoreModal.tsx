@@ -21,9 +21,11 @@ export const StoreModal: React.FC<StoreModalProps> = ({ isOpen, shop, onClose })
           <X className="w-4 h-4" />
         </button>
 
-        <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center mb-3">
-          <MapPin className="w-6 h-6" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="Shree Durga Cloth Store"
+          className="w-16 h-16 rounded-2xl object-contain mx-auto mb-3 shadow-md border border-amber-200/60 dark:border-amber-700/50 bg-white dark:bg-zinc-800 p-1"
+        />
 
         <h3 className="font-extrabold text-gray-900 dark:text-white text-lg">{shop.name}</h3>
         <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1 mb-5">{shop.tagline}</p>

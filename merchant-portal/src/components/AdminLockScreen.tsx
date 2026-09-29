@@ -89,9 +89,14 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({ onUnlock }) =>
       {/* Main Lock Card */}
       <div className="relative z-10 w-full max-w-md bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center">
         
+        {/* Brand Logo */}
+        <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-500/40 mx-auto shadow-xl shadow-amber-500/20 mb-4 bg-slate-950 flex items-center justify-center">
+          <img src="/logo.png" alt="Shree Durga Cloth Store" className="w-full h-full object-cover" />
+        </div>
+
         {/* Shield Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/10 mb-5">
-          <Shield className="w-8 h-8" />
+        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/10 mb-4">
+          <Shield className="w-5 h-5" />
         </div>
 
         {/* Title & Shop Brand */}

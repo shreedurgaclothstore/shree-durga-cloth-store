@@ -30,18 +30,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/60 dark:border-zinc-800 shadow-xs transition-colors">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-rose-100/60 dark:border-zinc-800 shadow-xs transition-colors pt-[env(safe-area-inset-top,0px)]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           
           {/* Shop Brand / Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-400 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-black text-xl tracking-tighter">
-              SD
-            </div>
+            <img
+              src="/logo.png"
+              alt="Shree Durga Cloth Store"
+              className="w-11 h-11 rounded-xl object-contain shadow-md border border-amber-200/60 dark:border-amber-700/50 bg-white dark:bg-zinc-800 p-0.5 shrink-0"
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="font-extrabold text-gray-900 dark:text-white text-base sm:text-lg tracking-tight leading-none">
-                  Shree Durga <span className="text-brand-600 dark:text-rose-400">Clearance</span>
+                  Shree Durga <span className="text-brand-600 dark:text-rose-400">Cloth Store</span>
                 </h1>
                 <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                   <Sparkles className="w-2.5 h-2.5" /> 24h Hold
@@ -52,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors mt-0.5 text-left"
               >
                 <MapPin className="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" />
-                <span className="truncate max-w-[170px] sm:max-w-xs">{shop.address.split(',')[1] || shop.address}</span>
+                <span className="truncate max-w-[170px] sm:max-w-xs">{shop.address}</span>
               </button>
             </div>
           </div>

@@ -36,8 +36,8 @@ export const App: React.FC = () => {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 font-black text-lg">
-              SD
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-500/30 shadow-md shadow-amber-600/10 shrink-0 bg-slate-950 flex items-center justify-center">
+              <img src="/logo.png" alt="Shree Durga Cloth Store" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
