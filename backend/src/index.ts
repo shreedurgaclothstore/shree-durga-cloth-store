@@ -6,7 +6,9 @@ import {
   verifyServerTOTP,
   createZeroTrustSessionToken,
   verifyZeroTrustSessionToken,
-  getOtpAuthUrl
+  getOtpAuthUrl,
+  signTokenQrPayload,
+  verifyTokenQrSignature
 } from './security';
 
 interface Env {
@@ -353,13 +355,14 @@ app.post('/api/tokens/book', async (c) => {
           UPDATE products SET available_quantity = ?, status = ? WHERE id = ?
         `).bind(newAvail, newStatus, productId).run();
 
-        // 4. Create Token
+        // 4. Create Token with Cryptographic HMAC Signature
         const randomDigits = Math.floor(100000 + Math.random() * 900000);
         const tokenId = `TK-${randomDigits}`;
-        const qrPayload = `CLOTH-TOKEN:${tokenId}:${Date.now()}`;
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
         const finalPayable = prod.discounted_price - prod.cashback_amount;
+        const sessionSecret = c.env?.ADMIN_SESSION_SECRET || 'SHREE_DURGA_ZERO_TRUST_SECRET_KEY_2026_CLOUDFLARE';
+        const qrPayload = await signTokenQrPayload(tokenId, productId, finalPayable, sessionSecret);
 
         await c.env.DB.prepare(`
           INSERT INTO tokens (
@@ -533,9 +536,38 @@ app.post('/api/merchant/scan', async (c) => {
 
   if (c.env?.DB) {
     try {
+      let cleanQuery = query.trim();
+      let isTampered = false;
+
+      // Verify cryptographic anti-tamper QR signature if scanned from QR payload
+      if (cleanQuery.startsWith('SD-TOKEN:')) {
+        const parts = cleanQuery.split(':');
+        if (parts.length >= 4) {
+          const [_, extractedTokenId, scannedPrice, sigHex] = parts;
+          cleanQuery = extractedTokenId;
+          const sessionSecret = c.env?.ADMIN_SESSION_SECRET || 'SHREE_DURGA_ZERO_TRUST_SECRET_KEY_2026_CLOUDFLARE';
+          
+          const probe = await c.env.DB.prepare('SELECT product_id, final_payable_amount FROM tokens WHERE id = ?').bind(extractedTokenId).first();
+          if (probe) {
+            const isValidSig = await verifyTokenQrSignature(extractedTokenId, probe.product_id, probe.final_payable_amount, sigHex, sessionSecret);
+            if (!isValidSig || Number(scannedPrice) !== Number(probe.final_payable_amount)) {
+              isTampered = true;
+            }
+          }
+        }
+      }
+
+      if (isTampered) {
+        return c.json({
+          success: true,
+          valid: false,
+          error: '🚨 SECURITY TAMPER ALERT: Cryptographic QR signature mismatch! Forged or altered price detected.'
+        });
+      }
+
       const tokenRow = await c.env.DB.prepare(`
         SELECT * FROM tokens WHERE id = ? OR qr_payload = ?
-      `).bind(query.trim(), query.trim()).first();
+      `).bind(cleanQuery, query.trim()).first();
 
       if (!tokenRow) {
         return c.json({ success: true, valid: false, error: 'Invalid Token! No reservation found in system.' });

@@ -193,3 +193,51 @@ export function getOtpAuthUrl(
 ): string {
   return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 }
+
+// Generate a cryptographically signed tamper-proof QR code payload
+export async function signTokenQrPayload(
+  tokenId: string,
+  productId: string,
+  finalPrice: number,
+  sessionSecret: string
+): Promise<string> {
+  const data = `${tokenId}:${productId}:${finalPrice}`;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(sessionSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+  const hex = bufToHex(signature).substring(0, 16);
+  return `SD-TOKEN:${tokenId}:${finalPrice}:${hex}`;
+}
+
+// Verify cryptographic signature of QR code payload
+export async function verifyTokenQrSignature(
+  tokenId: string,
+  productId: string,
+  finalPrice: number,
+  signatureHex: string,
+  sessionSecret: string
+): Promise<boolean> {
+  try {
+    const data = `${tokenId}:${productId}:${finalPrice}`;
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(sessionSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+    const expectedHex = bufToHex(signature).substring(0, 16);
+    return expectedHex.toLowerCase() === signatureHex.toLowerCase();
+  } catch (e) {
+    return false;
+  }
+}
+
