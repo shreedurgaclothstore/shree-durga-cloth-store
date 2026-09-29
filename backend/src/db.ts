@@ -4,9 +4,9 @@ import { Product, TokenReservation, ShopInfo, Banner } from '../../shared/types'
 export const DEFAULT_SHOP: ShopInfo = {
   name: 'Shree Durga Cloth Store',
   tagline: 'Exclusive Clearance & Factory Seconds Stock',
-  address: 'Shop #14, Main Market, Near Clock Tower, Gandhinagar',
+  address: 'Sahajpal, Boudh, Odisha',
   phone: '+91 98765 43210',
-  mapsUrl: 'https://maps.google.com/?q=Shree+Durga+Cloth+Store',
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=20.820833,84.159972',
   timing: '10:30 AM - 09:30 PM (All 7 Days Open)',
 };
 
