@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { Shield, KeyRound, QrCode, Copy, Check, AlertCircle, Lock, ArrowRight, Smartphone } from 'lucide-react';
+import { Shield, AlertCircle, ArrowRight, Lock } from 'lucide-react';
 import { AdminAuthService } from '../services/adminAuth';
 
 interface AdminLockScreenProps {
@@ -11,27 +10,12 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({ onUnlock }) =>
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showQrModal, setShowQrModal] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [emergencyCode, setEmergencyCode] = useState('');
-  const [showEmergencyInput, setShowEmergencyInput] = useState(false);
-  const [qrConfig, setQrConfig] = useState<{ secret: string; otpauthUrl: string }>({
-    secret: 'KRDG4ZDPNU6T2ZLS',
-    otpauthUrl: 'otpauth://totp/Shree%20Durga%20Cloth%20Store:CounterAdmin?secret=KRDG4ZDPNU6T2ZLS&issuer=Shree%20Durga%20Cloth%20Store&algorithm=SHA1&digits=6&period=30'
-  });
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     // Focus first input box on mount
     inputRefs.current[0]?.focus();
-
-    // Fetch dynamic Cloudflare Worker QR config
-    AdminAuthService.getQrSetup().then(cfg => {
-      if (cfg && cfg.secret) {
-        setQrConfig(cfg);
-      }
-    });
   }, []);
 
   const handleDigitChange = (index: number, val: string) => {
@@ -93,31 +77,6 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({ onUnlock }) =>
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEmergencySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emergencyCode.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await AdminAuthService.verifyAndUnlock(emergencyCode.trim());
-      if (res.success) {
-        onUnlock();
-      } else {
-        setError(res.error || 'Invalid emergency master passcode.');
-      }
-    } catch (e) {
-      setError('Connection failure during emergency unlock.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopySecret = () => {
-    navigator.clipboard.writeText(qrConfig.secret);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
   };
 
   return (
@@ -204,106 +163,13 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({ onUnlock }) =>
           )}
         </button>
 
-        {/* Helper Action Buttons */}
-        <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-          <button
-            onClick={() => setShowQrModal(true)}
-            className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors font-medium"
-          >
-            <QrCode className="w-4 h-4" />
-            <span>Setup / View QR</span>
-          </button>
-
-          <button
-            onClick={() => setShowEmergencyInput(!showEmergencyInput)}
-            className="flex items-center gap-1.5 hover:text-slate-200 transition-colors font-medium"
-          >
-            <KeyRound className="w-4 h-4" />
-            <span>Emergency Passcode</span>
-          </button>
+        {/* Security Notice */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+          <Lock className="w-3.5 h-3.5 text-slate-600" />
+          <span>Authorized Counter Personnel Only</span>
         </div>
-
-        {/* Emergency Passcode Form */}
-        {showEmergencyInput && (
-          <form onSubmit={handleEmergencySubmit} className="mt-4 p-3 bg-slate-900/95 rounded-2xl border border-slate-700/80 text-left space-y-2 animate-in fade-in">
-            <p className="text-[11px] text-slate-400">
-              Enter backup emergency passcode (provided during initial deployment):
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="e.g. SD-2026-DURGA"
-                value={emergencyCode}
-                onChange={(e) => setEmergencyCode(e.target.value)}
-                className="flex-1 px-3 py-2 text-xs font-mono bg-slate-800 border border-slate-700 rounded-lg text-white uppercase focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white transition-colors"
-              >
-                Bypass
-              </button>
-            </div>
-          </form>
-        )}
 
       </div>
-
-      {/* QR Code Setup Modal */}
-      {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white text-gray-900 rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl text-center space-y-4">
-            
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
-              <Smartphone className="w-6 h-6" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-black text-gray-900">Scan in Google Authenticator</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Open Google Authenticator on your phone, tap <b>+</b>, and scan this QR code:
-              </p>
-            </div>
-
-            {/* QR Code Display */}
-            <div className="p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl inline-block shadow-inner">
-              <QRCodeSVG
-                value={qrConfig.otpauthUrl}
-                size={180}
-                level="M"
-                includeMargin={false}
-              />
-            </div>
-
-            {/* Manual Secret Key */}
-            <div className="bg-gray-100 p-2.5 rounded-xl border border-gray-200 text-left space-y-1">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Or enter key manually:
-              </span>
-              <div className="flex items-center justify-between">
-                <code className="text-xs font-mono font-black text-gray-800 tracking-wider">
-                  {qrConfig.secret}
-                </code>
-                <button
-                  onClick={handleCopySecret}
-                  className="p-1 text-gray-500 hover:text-emerald-600"
-                  title="Copy Key"
-                >
-                  {copiedKey ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowQrModal(false)}
-              className="w-full py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white text-xs font-bold transition-all"
-            >
-              Done, Return to Login
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );

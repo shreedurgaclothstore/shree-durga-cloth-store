@@ -139,18 +139,7 @@ app.post('/api/admin/verify-totp', async (c) => {
   }
 });
 
-// 1.0.2 Fetch QR Code Setup Config (Read directly from Cloudflare Worker Env)
-app.get('/api/admin/setup-qr', async (c) => {
-  const secret = c.env?.ADMIN_TOTP_SECRET || 'KRDG4ZDPNU6T2ZLS';
-  const otpauthUrl = getOtpAuthUrl(secret, 'CounterAdmin', 'Shree Durga Cloth Store');
-  return c.json({
-    success: true,
-    secret,
-    otpauthUrl
-  });
-});
-
-// 1.0.3 Verify Active Admin Session Token
+// 1.0.2 Verify Active Admin Session Token
 app.get('/api/admin/verify-session', async (c) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

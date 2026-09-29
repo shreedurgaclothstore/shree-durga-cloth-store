@@ -18,12 +18,6 @@ export interface VerifyTotpResponse {
   error?: string;
 }
 
-export interface QrSetupResponse {
-  success: boolean;
-  secret: string;
-  otpauthUrl: string;
-}
-
 export const AdminAuthService = {
   // Check if session token exists and is valid (not expired)
   isUnlocked(): boolean {
@@ -93,30 +87,10 @@ export const AdminAuthService = {
     }
   },
 
-  // Fetch QR setup details directly from Cloudflare Worker Environment
-  async getQrSetup(): Promise<QrSetupResponse> {
-    try {
-      const res = await fetch(`${API_BASE}/admin/setup-qr`);
-      const data: QrSetupResponse = await res.json();
-      if (data.success && data.secret && data.otpauthUrl) {
-        return data;
-      }
-    } catch (e) {
-      console.warn('Failed to load server QR config, using fallback');
-    }
-
-    // Default emergency fallback
-    const fallbackSecret = 'KRDG4ZDPNU6T2ZLS';
-    return {
-      success: true,
-      secret: fallbackSecret,
-      otpauthUrl: `otpauth://totp/Shree%20Durga%20Cloth%20Store:CounterAdmin?secret=${fallbackSecret}&issuer=Shree%20Durga%20Cloth%20Store&algorithm=SHA1&digits=6&period=30`
-    };
-  },
-
   // Lock portal and clear active session
   lock() {
     localStorage.removeItem(SESSION_KEY);
     window.dispatchEvent(new CustomEvent('admin-auth-changed', { detail: { unlocked: false } }));
   }
 };
+
