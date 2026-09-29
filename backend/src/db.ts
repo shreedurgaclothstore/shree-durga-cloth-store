@@ -2,11 +2,11 @@ import { Product, TokenReservation, ShopInfo, Banner } from '../../shared/types'
 
 // Initial shop info
 export const DEFAULT_SHOP: ShopInfo = {
-  name: 'Royal Heritage Cloth Emporium',
+  name: 'Shree Durga Cloth Store',
   tagline: 'Exclusive Clearance & Factory Seconds Stock',
   address: 'Shop #14, Main Market, Near Clock Tower, Gandhinagar',
   phone: '+91 98765 43210',
-  mapsUrl: 'https://maps.google.com/?q=Shop+14+Main+Market',
+  mapsUrl: 'https://maps.google.com/?q=Shree+Durga+Cloth+Store',
   timing: '10:30 AM - 09:30 PM (All 7 Days Open)',
 };
 

@@ -1,17 +1,12 @@
-name = "cloth-shop-backend"
+name = "shree-durga-cloth-backend"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # Cloudflare D1 Database Binding
 [[d1_databases]]
 binding = "DB"
-database_name = "cloth-shop-db"
-database_id = "local-cloth-shop-db"
-
-# Cloudflare R2 Bucket for Product Clearance Photos
-[[r2_buckets]]
-binding = "PHOTOS"
-bucket_name = "cloth-shop-photos"
+database_name = "cloth_shop_db"
+database_id = "35db439e-cc7c-495f-beef-0a44eb9c9ee6"
 
 # Scheduled Cron for 24-hr token expiration (every 10 minutes)
 [triggers]
